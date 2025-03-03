@@ -10,6 +10,10 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 bot = Client("rename_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
+# ✅ Directory for storing user thumbnails
+THUMB_DIR = "thumbnails"
+os.makedirs(THUMB_DIR, exist_ok=True)
+
 # ✅ Function to clean filename
 def clean_filename(original_name):
     # Remove everything inside brackets [] (e.g., [Dual], [Fansub])
@@ -23,11 +27,28 @@ def clean_filename(original_name):
         return f"[@Animes2u] {clean_name}"  # Add the prefix
     return f"[@Animes2u] Unknown_File"
 
+# ✅ Command to set a permanent thumbnail
+@bot.on_message(filters.command("set_thumb") & filters.photo)
+async def set_thumbnail(client: Client, message: Message):
+    file_path = os.path.join(THUMB_DIR, f"{message.from_user.id}.jpg")
+    await client.download_media(message.photo, file_name=file_path)
+    await message.reply_text("✅ Thumbnail saved successfully!")
+
+# ✅ Command to delete the thumbnail
+@bot.on_message(filters.command("del_thumb"))
+async def delete_thumbnail(client: Client, message: Message):
+    file_path = os.path.join(THUMB_DIR, f"{message.from_user.id}.jpg")
+    if os.path.exists(file_path):
+        os.remove(file_path)
+        await message.reply_text("✅ Thumbnail deleted!")
+    else:
+        await message.reply_text("⚠️ No thumbnail found!")
+
 # ✅ File Rename & Process
 @bot.on_message(filters.document)
 async def rename_file(client: Client, message: Message):
     file_path = await client.download_media(message)
-    
+
     if not file_path:
         await message.reply_text("❌ Failed to download file.")
         return
@@ -39,10 +60,16 @@ async def rename_file(client: Client, message: Message):
 
     os.rename(file_path, new_file_path)
 
+    # ✅ Check if user has set a thumbnail
+    thumb_path = os.path.join(THUMB_DIR, f"{message.from_user.id}.jpg")
+    if not os.path.exists(thumb_path):
+        thumb_path = None  # No thumbnail set
+
     try:
         await client.send_document(
             chat_id=message.chat.id,
             document=new_file_path,
+            thumb=thumb_path,
             file_name=new_filename,
             caption=f"✅ Renamed: {new_filename}",
         )
@@ -54,7 +81,9 @@ async def rename_file(client: Client, message: Message):
 @bot.on_message(filters.command("start"))
 async def start(client: Client, message: Message):
     await message.reply_text(
-        "👋 Hello! Send a file, and I'll rename it!"
+        "👋 Hello! Send a file, and I'll rename it!\n\n"
+        "📸 Use `/set_thumb` to set a permanent thumbnail.\n"
+        "🗑 Use `/del_thumb` to delete your thumbnail."
     )
 
 # ✅ Start the bot
