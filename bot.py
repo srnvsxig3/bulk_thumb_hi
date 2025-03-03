@@ -98,11 +98,11 @@ async def rename_file(client, message):
     # ✅ Extract filename & extension
     file_name, file_ext = os.path.splitext(message.document.file_name)
 
-    # ✅ Remove [@...] (e.g., [@Anime_Artic]) but keep episode numbers, quality, and Dual
-    clean_name = re.sub(r"@[^]]*?", "", file_name).strip()
+    # ✅ Remove any text inside brackets except [E###] and [###p]
+    clean_name = re.sub(r"(?!E\d{2,4}|[0-9]{3,4}p)[^]*?", "", file_name).strip()
 
-    # ✅ Keep only [E###], [720p], [1080p], [Dual] and remove other brackets
-    clean_name = re.sub(r"(?!E\d+|[0-9]{3,4}p|Dual)[^]*?", "", clean_name).strip()
+    # ✅ Remove extra spaces
+    clean_name = re.sub(r"\s+", " ", clean_name).strip()
 
     # ✅ Add prefix
     new_filename = f"{DEFAULT_KEYWORD}{clean_name}{file_ext}"
